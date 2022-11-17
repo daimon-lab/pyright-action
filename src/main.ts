@@ -4,19 +4,18 @@ import * as cp from "node:child_process";
 import * as core from "@actions/core";
 import * as command from "@actions/core/lib/command";
 
-import { getActionVersion, getArgs, getNodeInfo } from "./helpers";
+import { getActionVersion, getArgs } from "./helpers";
 import { Diagnostic, isEmptyRange, parseReport } from "./schema";
 
 export async function main() {
     try {
-        const node = getNodeInfo();
-        const { workingDirectory, noComments, pyrightVersion, args } = await getArgs();
+        const { workingDirectory, noComments, args } = await getArgs();
         if (workingDirectory) {
             process.chdir(workingDirectory);
         }
 
-        core.info(`pyright ${pyrightVersion}, node ${node.version}, pyright-action ${getActionVersion()}`);
-        core.info(`${node.execPath} ${args.join(" ")}`);
+        core.info(`pyright, pyright-action ${getActionVersion()}`);
+        core.info(`pdm run ${args.join(" ")}`);
 
         // We check for --verifytypes as an arg instead of a flag because it may have
         // been passed via extra-args.
@@ -27,7 +26,7 @@ export async function main() {
             // on the output besides the exit code.
             //
             // So, in either case, just directly run pyright and exit with its status.
-            const { status } = cp.spawnSync(node.execPath, args, {
+            const { status } = cp.spawnSync("pdm", args, {
                 stdio: ["ignore", "inherit", "inherit"],
             });
 
@@ -37,7 +36,7 @@ export async function main() {
             return;
         }
 
-        const { status, stdout } = cp.spawnSync(node.execPath, args, {
+        const { status, stdout } = cp.spawnSync("pdm", args, {
             encoding: "utf-8",
             stdio: ["ignore", "pipe", "inherit"],
             maxBuffer: 100 * 1024 * 1024, // 100 MB "ought to be enough for anyone"; https://github.com/nodejs/node/issues/9829

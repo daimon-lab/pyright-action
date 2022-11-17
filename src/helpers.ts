@@ -1,32 +1,14 @@
-import * as path from "node:path";
-
 import * as core from "@actions/core";
-import * as httpClient from "@actions/http-client";
-import * as tc from "@actions/tool-cache";
-import SemVer from "semver/classes/semver";
 import stringArgv from "string-argv";
 
 import { version as actionVersion } from "../package.json";
-import { NpmRegistryResponse, parseNpmRegistryResponse } from "./schema";
 
 export function getActionVersion() {
     return actionVersion;
 }
 
-export function getNodeInfo() {
-    return {
-        version: process.version,
-        execPath: process.execPath,
-    };
-}
-
 export async function getArgs() {
-    const pyrightInfo = await getPyrightInfo();
-    const pyrightPath = await downloadPyright(pyrightInfo);
-
-    const args = [path.join(pyrightPath, "package", "index.js")];
-
-    const workingDirectory = core.getInput("working-directory");
+    const args = ["run", "pyright"];
 
     const noComments = getBooleanInput("no-comments", false);
     if (!noComments) {
@@ -85,9 +67,8 @@ export async function getArgs() {
     }
 
     return {
-        workingDirectory,
+        workingDirectory: core.getInput("working-directory"),
         noComments,
-        pyrightVersion: pyrightInfo.version,
         args,
     };
 }
@@ -98,38 +79,4 @@ function getBooleanInput(name: string, defaultValue: boolean): boolean {
         return defaultValue;
     }
     return input.toUpperCase() === "TRUE";
-}
-
-const pyrightToolName = "pyright";
-
-async function downloadPyright(info: NpmRegistryResponse): Promise<string> {
-    // Note: this only works because the pyright package doesn't have any
-    // dependencies. If this ever changes, we'll have to actually install it.
-    const found = tc.find(pyrightToolName, info.version);
-    if (found) {
-        return found;
-    }
-
-    const tarballPath = await tc.downloadTool(info.dist.tarball);
-    const extractedPath = await tc.extractTar(tarballPath);
-    return await tc.cacheDir(extractedPath, pyrightToolName, info.version);
-}
-
-async function getPyrightInfo(): Promise<NpmRegistryResponse> {
-    const version = getPyrightVersion();
-    const client = new httpClient.HttpClient();
-    const resp = await client.get(`https://registry.npmjs.org/pyright/${version}`);
-    const body = await resp.readBody();
-    if (resp.message.statusCode !== httpClient.HttpCodes.OK) {
-        throw new Error(body);
-    }
-    return parseNpmRegistryResponse(JSON.parse(body));
-}
-
-function getPyrightVersion() {
-    const versionSpec = core.getInput("version");
-    if (versionSpec) {
-        return new SemVer(versionSpec).format();
-    }
-    return "latest";
 }

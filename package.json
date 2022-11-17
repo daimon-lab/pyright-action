@@ -6,7 +6,7 @@
     "main": "dist/index.js",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/jakebailey/pyright-action.git"
+        "url": "git+https://github.com/daimon-lab/pyright-action.git"
     },
     "author": "Jake Bailey",
     "license": "MIT",
